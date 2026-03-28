@@ -20,6 +20,44 @@ export default function NewsTicker() {
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const intervalRef = useRef<NodeJS.Timeout>();
 
+  // 순차적 번역 - 한 번에 5개씩만 번역하여 API 제한 방지
+  const translateNews = async (newsItems: NewsItem[]): Promise<NewsItem[]> => {
+    const translatedItems: NewsItem[] = [];
+    const batchSize = 5; // 한 번에 5개씩 번역
+
+    for (let i = 0; i < newsItems.length; i += batchSize) {
+      const batch = newsItems.slice(i, i + batchSize);
+      
+      const translatedBatch = await Promise.all(
+        batch.map(async (item) => {
+          // 번역 실패 시 원문 그대로 반환
+          try {
+            const translated = await translateHeadline(item.title);
+            return {
+              ...item,
+              titleKo: translated,
+            };
+          } catch (err) {
+            console.warn(`Translation failed for: ${item.title}`, err);
+            return {
+              ...item,
+              titleKo: item.title, // 번역 실패 시 원문 사용
+            };
+          }
+        })
+      );
+
+      translatedItems.push(...translatedBatch);
+
+      // 각 배치 사이에 500ms 딜레이 추가
+      if (i + batchSize < newsItems.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    return translatedItems;
+  };
+
   const fetchNews = async () => {
     try {
       setLoading(true);
@@ -45,15 +83,7 @@ export default function NewsTicker() {
       console.log(`✅ Fetched ${data.news.length} news items`);
 
       console.log('🔄 Translating news...');
-      const translatedNews = await Promise.all(
-        data.news.map(async (item) => {
-          const translated = await translateHeadline(item.title);
-          return {
-            ...item,
-            titleKo: translated,
-          };
-        })
-      );
+      const translatedNews = await translateNews(data.news);
       console.log(`✅ Translated ${translatedNews.length} items`);
 
       setNews(translatedNews);
@@ -141,7 +171,6 @@ export default function NewsTicker() {
             <p className="text-white text-xl mt-4">뉴스를 불러오는 중...</p>
           </div>
         ) : currentNews ? (
-          // 높이 고정: min-h-[500px]
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 shadow-2xl border border-white/20 transition-all duration-500 hover:scale-105 min-h-[500px]">
             <h2 className="text-4xl font-bold text-white mb-3 leading-tight">
               {currentNews.titleKo || currentNews.title}
@@ -190,7 +219,6 @@ export default function NewsTicker() {
           </div>
         )}
 
-        {/* 뉴스 리스트 - 높이 고정: max-h-[500px] */}
         {news.length > 0 && (
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/20">
             <h3 className="text-2xl font-bold text-white mb-4">📰 전체 뉴스 ({news.length}개)</h3>
