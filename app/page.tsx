@@ -141,7 +141,8 @@ export default function NewsTicker() {
             <p className="text-white text-xl mt-4">뉴스를 불러오는 중...</p>
           </div>
         ) : currentNews ? (
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 shadow-2xl border border-white/20 transition-all duration-500 hover:scale-105">
+          // 높이 고정: min-h-[500px]
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-8 shadow-2xl border border-white/20 transition-all duration-500 hover:scale-105 min-h-[500px]">
             <h2 className="text-4xl font-bold text-white mb-3 leading-tight">
               {currentNews.titleKo || currentNews.title}
             </h2>
@@ -189,10 +190,11 @@ export default function NewsTicker() {
           </div>
         )}
 
+        {/* 뉴스 리스트 - 높이 고정: max-h-[500px] */}
         {news.length > 0 && (
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/20">
             <h3 className="text-2xl font-bold text-white mb-4">📰 전체 뉴스 ({news.length}개)</h3>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-[500px] overflow-y-auto">
               {news.map((item, index) => (
                 <div
                   key={`${item.link}-${index}`}
