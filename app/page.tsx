@@ -9,7 +9,7 @@ interface NewsItem {
   pubDate?: string;
   contentSnippet?: string;
   source?: string;
-  titleKo?: string; // 번역된 제목
+  titleKo?: string;
 }
 
 export default function NewsTicker() {
@@ -19,37 +19,7 @@ export default function NewsTicker() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string>('');
   const intervalRef = useRef<NodeJS.Timeout>();
-  const translationCache = useRef<Map<string, string>>(new Map());
 
-  // 뉴스 번역
-  const translateNews = async (newsItems: NewsItem[]): Promise<NewsItem[]> => {
-    const translatedItems = await Promise.all(
-      newsItems.map(async (item) => {
-        // 캐시 확인
-        if (translationCache.current.has(item.title)) {
-          return {
-            ...item,
-            titleKo: translationCache.current.get(item.title),
-          };
-        }
-
-        // 번역
-        const translated = await translateHeadline(item.title);
-
-        // 캐시 저장
-        translationCache.current.set(item.title, translated);
-
-        return {
-          ...item,
-          titleKo: translated,
-        };
-      })
-    );
-
-    return translatedItems;
-  };
-
-  // 뉴스 가져오기
   const fetchNews = async () => {
     try {
       setLoading(true);
@@ -74,9 +44,16 @@ export default function NewsTicker() {
 
       console.log(`✅ Fetched ${data.news.length} news items`);
 
-      // 뉴스 번역
       console.log('🔄 Translating news...');
-      const translatedNews = await translateNews(data.news);
+      const translatedNews = await Promise.all(
+        data.news.map(async (item) => {
+          const translated = await translateHeadline(item.title);
+          return {
+            ...item,
+            titleKo: translated,
+          };
+        })
+      );
       console.log(`✅ Translated ${translatedNews.length} items`);
 
       setNews(translatedNews);
@@ -87,9 +64,7 @@ export default function NewsTicker() {
       console.error('❌ Error fetching news:', errorMsg);
       setError(errorMsg);
 
-      // 에러가 발생해도 기존 뉴스는 유지
       if (news.length === 0) {
-        // 뉴스가 없으면 샘플 데이터 표시
         setNews(getSampleNews());
       }
     } finally {
@@ -97,7 +72,6 @@ export default function NewsTicker() {
     }
   };
 
-  // 샘플 뉴스 (에러 발생 시 사용)
   const getSampleNews = (): NewsItem[] => [
     {
       title: 'Loading real-time news...',
@@ -110,20 +84,17 @@ export default function NewsTicker() {
       title: 'Click refresh to retry',
       titleKo: '새로고침을 눌러주세요',
       link: '#',
-      contentSnippet: 'Click the refresh button to reload news manually.',
+      contentSnippet: 'Click refresh button to reload news manually.',
       source: 'System',
     },
   ];
 
-  // 초기 로드
   useEffect(() => {
     fetchNews();
   }, []);
 
-  // 주기적으로 뉴스 업데이트 (3분마다)
   useEffect(() => {
-    intervalRef.current = setInterval(fetchNews, 180000); // 3분
-
+    intervalRef.current = setInterval(fetchNews, 180000);
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -131,12 +102,10 @@ export default function NewsTicker() {
     };
   }, []);
 
-  // 헤드라인 티커 (5초마다 변경)
   useEffect(() => {
     const tickerInterval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % Math.max(news.length, 1));
-    }, 5000); // 5초
-
+    }, 5000);
     return () => clearInterval(tickerInterval);
   }, [news]);
 
@@ -145,7 +114,6 @@ export default function NewsTicker() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-pink-900 p-8">
       <div className="max-w-4xl mx-auto">
-        {/* 헤더 */}
         <header className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-2 drop-shadow-lg">
             🤖 AI News Ticker
@@ -167,7 +135,6 @@ export default function NewsTicker() {
           )}
         </header>
 
-        {/* 메인 헤드라인 티커 */}
         {loading && news.length === 0 ? (
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center">
             <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
@@ -222,7 +189,6 @@ export default function NewsTicker() {
           </div>
         )}
 
-        {/* 뉴스 리스트 (스크롤 가능) */}
         {news.length > 0 && (
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/20">
             <h3 className="text-2xl font-bold text-white mb-4">📰 전체 뉴스 ({news.length}개)</h3>
@@ -263,7 +229,6 @@ export default function NewsTicker() {
           </div>
         )}
 
-        {/* 새로고침 버튼 */}
         <div className="text-center mt-6">
           <button
             onClick={fetchNews}
@@ -274,10 +239,9 @@ export default function NewsTicker() {
           </button>
         </div>
 
-        {/* 푸터 */}
         <footer className="text-center mt-12 text-gray-400 text-sm">
           <p>RSS 피드에서 실시간으로 수집 (Hacker News, TechCrunch, MIT Technology Review, VentureBeat)</p>
-          <p className="mt-2">🌐 LibreTranslate로 한국어 자동 번역</p>
+          <p className="mt-2">🌐 MyMemory API로 한국어 자동 번역</p>
         </footer>
       </div>
     </main>
